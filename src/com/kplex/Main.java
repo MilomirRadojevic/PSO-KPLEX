@@ -52,7 +52,7 @@ public class Main {
                 .map(Swarm::getGlobalBestFitness)
                 .collect(Collectors.toList());
 
-        var gbp = swarms.stream()
+        List<List<Double>> gbp = swarms.stream()
                 .map(Swarm::getGlobalBestPosition)
                 .collect(Collectors.toList());
 
