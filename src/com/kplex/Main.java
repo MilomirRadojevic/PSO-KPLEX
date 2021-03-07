@@ -31,7 +31,7 @@ public class Main {
                 .mapToObj(
                         value -> new ContinuousSwarm(
                                 nodes,
-                                PartitioningFitness.getInstance(),
+                                SortingFitness.getInstance(),
                                 LinearlyChangingInertia.getInstance(),
                                 LinearlyChangingCognitive.getInstance(),
                                 LinearlyChangingSocial.getInstance()
