@@ -8,7 +8,10 @@ import com.kplex.particle.inertia.Inertia;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import static com.kplex.config.Constants.MAX_ITERATIONS;
 
 public abstract class Swarm<T extends Particle<U, V>, U, V> {
     protected Map<Integer, Node> nodes;
@@ -20,6 +23,7 @@ public abstract class Swarm<T extends Particle<U, V>, U, V> {
     protected final Inertia inertia;
     protected final Acceleration cognitive;
     protected final Acceleration social;
+    protected double currentInertia;
 
     protected Swarm(Map<Integer, Node> nodes,
                     Fitness<U, V> fitness,
@@ -37,6 +41,7 @@ public abstract class Swarm<T extends Particle<U, V>, U, V> {
     public void iterate(int iterationCounter) {
         diversifySwarm();
         updateGlobalBestKnownPosition();
+        calculateInertia(iterationCounter);
         
         particles.parallelStream()
                 .forEach(
@@ -48,6 +53,8 @@ public abstract class Swarm<T extends Particle<U, V>, U, V> {
     }
     
     protected abstract void diversifySwarm();
+
+    protected abstract void calculateInertia(int iterationCounter);
 
     protected abstract void calculateVelocity(T particle, int iterationCounter);
 
@@ -73,6 +80,17 @@ public abstract class Swarm<T extends Particle<U, V>, U, V> {
 
     public double getGlobalBestFitness() {
         return globalBestFitness;
+    }
+
+    public static <T extends Particle<U, V>, U, V, W extends Swarm<T, U, V>> void replaceWorstSwarm(List<W> swarms,
+                                                                          int iterationCounter,
+                                                                          Supplier<W> swarmGenerator) {
+        // TODO parametrize 250
+        if (iterationCounter % 250 == 0 && iterationCounter < MAX_ITERATIONS) {
+            swarms.stream()
+                    .min(Comparator.comparingDouble(Swarm::getGlobalBestFitness))
+                    .ifPresent(swarm -> swarm = swarmGenerator.get());
+        }
     }
 
     public void printNodes() {

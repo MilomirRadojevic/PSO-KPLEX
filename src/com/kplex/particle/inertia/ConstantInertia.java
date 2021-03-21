@@ -1,5 +1,7 @@
 package com.kplex.particle.inertia;
 
+import java.util.function.Supplier;
+
 import static com.kplex.config.Constants.INERTIA_FACTOR;
 
 public class ConstantInertia implements ContinuousInertia {
@@ -18,7 +20,7 @@ public class ConstantInertia implements ContinuousInertia {
     }
 
     @Override
-    public double calculate(int iterationCounter) {
+    public double calculate(double currentInertia, int iterationCounter, Supplier<Double> averageAbsoluteVelocitySupplier) {
         return INERTIA_FACTOR;
     }
 }

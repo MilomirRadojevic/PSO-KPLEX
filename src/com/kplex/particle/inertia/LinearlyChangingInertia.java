@@ -1,5 +1,7 @@
 package com.kplex.particle.inertia;
 
+import java.util.function.Supplier;
+
 import static com.kplex.config.Constants.*;
 
 public class LinearlyChangingInertia implements ContinuousInertia {
@@ -18,7 +20,7 @@ public class LinearlyChangingInertia implements ContinuousInertia {
     }
 
     @Override
-    public double calculate(int iterationCounter) {
-        return MIN_INERTIA + (MAX_INERTIA - MIN_INERTIA) * (double) iterationCounter / (double) MAX_ITERATIONS;
+    public double calculate(double currentInertia, int iterationCounter, Supplier<Double> averageAbsoluteVelocitySupplier) {
+        return INITIAL_INERTIA + (FINAL_INERTIA - INITIAL_INERTIA) * (double) iterationCounter / (double) MAX_ITERATIONS;
     }
 }

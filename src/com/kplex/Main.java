@@ -5,6 +5,7 @@ import com.kplex.particle.ContinuousParticle;
 import com.kplex.particle.acceleration.LinearlyChangingCognitive;
 import com.kplex.particle.acceleration.LinearlyChangingSocial;
 import com.kplex.particle.fitness.*;
+import com.kplex.particle.inertia.IdealVelocityControlledInertia;
 import com.kplex.particle.inertia.LinearlyChangingInertia;
 import com.kplex.swarm.ContinuousSwarm;
 import com.kplex.swarm.Swarm;
@@ -13,6 +14,9 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.IntConsumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -24,19 +28,11 @@ public class Main {
     public static void main(String[] args) throws IOException {
         Instant start = Instant.now();
 
-        Map<Integer, Node> nodes = Node.initializeNodes("src/resources/MANN_a9.clq.txt");
+        Map<Integer, Node> nodes = Node.initializeNodes("src/resources/hamming6-2.clq.txt");
 
-        List<Swarm<ContinuousParticle, List<Double>, List<Double>>> swarms = IntStream
+        List<ContinuousSwarm> swarms = IntStream
                 .range(0, NUMBER_OF_SUBSWARMS)
-                .mapToObj(
-                        value -> new ContinuousSwarm(
-                                nodes,
-                                SortingFitness.getInstance(),
-                                LinearlyChangingInertia.getInstance(),
-                                LinearlyChangingCognitive.getInstance(),
-                                LinearlyChangingSocial.getInstance()
-                        )
-                )
+                .mapToObj(value -> ContinuousSwarm.newSwarm(nodes))
                 .collect(Collectors.toList());
 
         IntStream.iterate(1, index -> index <= MAX_ITERATIONS, index -> index + 1)
@@ -46,7 +42,10 @@ public class Main {
 //                        .collect(Collectors.toList())
 //                        .stream().map(doubles -> doubles.get(0))
 //                        .collect(Collectors.toList()))
-                .forEach(value -> swarms.forEach(swarm -> swarm.iterate(value)));
+                .forEach(
+                        ((IntConsumer) value -> Swarm.replaceWorstSwarm(swarms, value, () -> ContinuousSwarm.newSwarm(nodes)))
+                                .andThen(value -> swarms.forEach(swarm -> swarm.iterate(value)))
+                );
 
         List<Double> gbf = swarms.stream()
                 .map(Swarm::getGlobalBestFitness)

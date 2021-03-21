@@ -4,7 +4,11 @@ import com.kplex.node.Node;
 import com.kplex.particle.ContinuousParticle;
 import com.kplex.particle.Particle;
 import com.kplex.particle.acceleration.Acceleration;
+import com.kplex.particle.acceleration.LinearlyChangingCognitive;
+import com.kplex.particle.acceleration.LinearlyChangingSocial;
 import com.kplex.particle.fitness.Fitness;
+import com.kplex.particle.fitness.SortingFitness;
+import com.kplex.particle.inertia.IdealVelocityControlledInertia;
 import com.kplex.particle.inertia.Inertia;
 import com.kplex.util.Utils;
 
@@ -13,6 +17,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -26,6 +31,8 @@ public class ContinuousSwarm extends Swarm<ContinuousParticle, List<Double>, Lis
                            Acceleration cognitive,
                            Acceleration social) {
         super(nodes, fitness, inertia, cognitive, social);
+
+        currentInertia = INITIAL_INERTIA;
 
         particles = IntStream.range(0, POPULATION_SIZE)
                 .mapToObj(value -> createParticle(nodes, fitness))
@@ -47,6 +54,11 @@ public class ContinuousSwarm extends Swarm<ContinuousParticle, List<Double>, Lis
     }
 
     @Override
+    protected void calculateInertia(int iterationCounter) {
+        currentInertia = inertia.calculate(currentInertia, iterationCounter, this::averageAbsoluteVelocity);
+    }
+
+    @Override
     protected void calculateVelocity(ContinuousParticle particle, int iterationCounter) {
         particle.setVelocity(
                 IntStream.range(0, numberOfNodes)
@@ -54,7 +66,7 @@ public class ContinuousSwarm extends Swarm<ContinuousParticle, List<Double>, Lis
                             double random_cognitive_factor = ThreadLocalRandom.current().nextDouble();
                             double random_social_factor = ThreadLocalRandom.current().nextDouble();
 
-                            return inertia.calculate(iterationCounter) * particle.getVelocity().get(index)
+                            return currentInertia * particle.getVelocity().get(index)
                                     + cognitive.calculate(iterationCounter) * random_cognitive_factor
                                     * (particle.getBestPosition().get(index)
                                         - particle.getPosition().get(index))
@@ -104,5 +116,30 @@ public class ContinuousSwarm extends Swarm<ContinuousParticle, List<Double>, Lis
     protected ContinuousParticle createParticle(Map<Integer, Node> nodes,
                                                 Fitness<List<Double>, List<Double>> fitness) {
         return new ContinuousParticle(nodes, fitness);
+    }
+
+    private double averageAbsoluteVelocity() {
+        return particles.stream()
+                .flatMap(continuousParticle -> continuousParticle.getVelocity().stream())
+                .mapToDouble(Double::doubleValue)
+                .sum();
+    }
+
+    // TODO parametrize this
+    public static ContinuousSwarm newSwarm(Map<Integer, Node> nodes) {
+        return new ContinuousSwarm(
+                nodes,
+                SortingFitness.getInstance(),
+                IdealVelocityControlledInertia.getInstance(),
+                LinearlyChangingCognitive.getInstance(),
+                LinearlyChangingSocial.getInstance()
+        );
+    }
+
+    // TODO temp
+    public static ContinuousSwarm worstSwarm(List<ContinuousSwarm> swarms) {
+        return swarms.stream()
+                .min(Comparator.comparingDouble(Swarm::getGlobalBestFitness))
+                .orElseThrow(RuntimeException::new);
     }
 }
